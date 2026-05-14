@@ -1,0 +1,126 @@
+Quiero que crees una aplicación web moderna llamada “GameDeals” enfocada en mostrar ofertas y descuentos de videojuegos de distintas plataformas digitales como Steam, Epic Games, Microsoft Store, Ubisoft Connect, EA App, GOG y PlayStation Store.
+
+La aplicación debe tener un diseño minimalista, elegante y moderno, con una estética premium similar a Steam, pero más limpia y moderna. Usa una paleta oscura con detalles en azul eléctrico o morado suave. La interfaz debe sentirse fluida, rápida y profesional.
+
+OBJETIVO:
+Mostrar videojuegos en oferta, permitiendo descubrir descuentos fácilmente desde múltiples tiendas en un solo lugar.
+
+TECNOLOGÍAS:
+- Next.js
+- TypeScript
+- TailwindCSS
+- Framer Motion para animaciones suaves
+- API pública de ofertas de juegos (como CheapShark o RAWG)
+- Despliegue optimizado para Vercel
+- No usar backend complejo ni bases de datos obligatorias
+- Todo debe poder ejecutarse fácilmente con npm install y npm run dev
+
+FUNCIONES PRINCIPALES:
+
+1. Página principal moderna:
+- Hero section elegante con juegos destacados
+- Carrusel de ofertas destacadas
+- Sección “Top Ofertas”
+- Sección “Más Vendidos”
+- Sección “Juegos Trending”
+- Tarjetas modernas con:
+  - Imagen del juego
+  - Precio original
+  - Precio rebajado
+  - Porcentaje de descuento
+  - Plataforma/store
+  - Botón “Ver oferta”
+
+2. Filtros:
+Agregar filtros visuales modernos:
+- Plataforma:
+  - Steam
+  - Epic Games
+  - Microsoft Store
+  - GOG
+  - Ubisoft
+  - PlayStation
+- Género:
+  - RPG
+  - Acción
+  - Terror
+  - Indie
+  - Multiplayer
+  - Shooter
+  - Deportes
+- Ordenar por:
+  - Mayor descuento
+  - Más populares
+  - Precio más bajo
+  - Más recientes
+
+3. Monedas:
+Agregar selector de moneda global:
+- USD
+- EUR
+- ARS
+
+Las conversiones pueden hacerse usando una API simple de divisas o tasas estáticas temporales.
+
+4. Diseño:
+- Totalmente responsive
+- Estilo premium
+- Sombras suaves
+- Cards redondeadas
+- Animaciones fluidas
+- Efectos hover modernos
+- Skeleton loaders mientras cargan datos
+- Navbar flotante minimalista
+- Footer elegante
+
+5. Experiencia visual:
+Agregar:
+- Transiciones suaves
+- Motion effects con Framer Motion
+- Blur effects
+- Glassmorphism sutil
+- Gradientes modernos
+- Loading states profesionales
+
+6. Organización:
+Estructura limpia:
+- components/
+- app/
+- services/
+- hooks/
+- lib/
+- types/
+
+7. Branding:
+Agregar branding sutil:
+- Logo simple de “GameDeals”
+- Marca discreta en footer:
+  “Powered by 2BleA”
+
+8. SEO:
+Preparar SEO básico:
+- metadata
+- Open Graph
+- títulos dinámicos
+- favicon gaming minimalista
+
+9. Deploy:
+La aplicación debe quedar lista para desplegar directamente en Vercel sin configuraciones complejas.
+
+IMPORTANTE:
+- Priorizar diseño visual y experiencia de usuario
+- Código limpio y escalable
+- Componentes reutilizables
+- Evitar complejidad innecesaria
+- La app debe verse como un producto real listo para producción
+
+EXTRA:
+Agregar modo oscuro por defecto.
+Agregar página individual de cada juego con:
+- descripción
+- screenshots
+- plataformas
+- descuentos disponibles
+- enlace directo a compra
+
+Haz que el resultado final se vea profesional, moderno y visualmente atractivo, como una startup real de gaming.
