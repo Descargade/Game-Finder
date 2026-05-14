@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useCurrency } from "@/context/CurrencyContext";
-import { Menu, X, Zap, Search, Globe } from "lucide-react";
+import { useWishlist } from "@/context/WishlistContext";
+import { Menu, X, Zap, Search, Globe, Heart } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -13,11 +14,12 @@ type Currency = typeof CURRENCIES[number];
 export function Navbar() {
   const [location] = useLocation();
   const { currency, setCurrency } = useCurrency();
+  const { belowTargetCount, items } = useWishlist();
   const { t, i18n } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchExpanded, setSearchExpanded] = useState(false);
 
-  const currentLang = i18n.language.startsWith("es") ? "es" : "en";
+  const currentLang = (i18n.language ?? "en").startsWith("es") ? "es" : "en";
 
   const toggleLanguage = () => {
     const next = currentLang === "en" ? "es" : "en";
@@ -29,6 +31,8 @@ export function Navbar() {
     { label: t("nav.home"), href: "/" },
     { label: t("nav.allDeals"), href: "/deals" },
   ];
+
+  const wishlistBadge = belowTargetCount > 0 ? belowTargetCount : items.length > 0 ? items.length : null;
 
   return (
     <header
@@ -77,6 +81,34 @@ export function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+            <Link href="/wishlist">
+              <button
+                data-testid="wishlist-nav-btn"
+                className={cn(
+                  "relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors",
+                  location === "/wishlist"
+                    ? "border-red-500/40 bg-red-500/10 text-red-400"
+                    : "border-border/40 bg-secondary/60 text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Heart className="w-3.5 h-3.5" fill={location === "/wishlist" ? "currentColor" : "none"} />
+                {t("nav.wishlist")}
+                {wishlistBadge !== null && (
+                  <span
+                    className={cn(
+                      "absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center",
+                      belowTargetCount > 0
+                        ? "bg-green-500 text-white"
+                        : "bg-primary text-primary-foreground"
+                    )}
+                    data-testid="wishlist-badge"
+                  >
+                    {wishlistBadge}
+                  </span>
+                )}
+              </button>
+            </Link>
+
             <button
               onClick={toggleLanguage}
               data-testid="language-toggle"
@@ -110,6 +142,24 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-1 md:hidden">
+            <Link href="/wishlist">
+              <button
+                className="relative p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                data-testid="mobile-wishlist-btn"
+              >
+                <Heart className="w-5 h-5" fill={items.length > 0 ? "currentColor" : "none"} />
+                {wishlistBadge !== null && (
+                  <span
+                    className={cn(
+                      "absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full text-[9px] font-bold flex items-center justify-center",
+                      belowTargetCount > 0 ? "bg-green-500 text-white" : "bg-primary text-primary-foreground"
+                    )}
+                  >
+                    {wishlistBadge}
+                  </span>
+                )}
+              </button>
+            </Link>
             <button
               className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
               onClick={() => { setSearchExpanded(!searchExpanded); setMobileOpen(false); }}
@@ -139,10 +189,7 @@ export function Navbar() {
             style={{ background: "rgba(8, 10, 20, 0.97)" }}
           >
             <div className="px-4 py-3" data-testid="mobile-search-bar">
-              <SearchBar
-                autoFocus
-                onClose={() => setSearchExpanded(false)}
-              />
+              <SearchBar autoFocus onClose={() => setSearchExpanded(false)} />
             </div>
           </motion.div>
         )}
@@ -173,7 +220,6 @@ export function Navbar() {
                   </span>
                 </Link>
               ))}
-
               <div className="flex items-center gap-2 pt-1">
                 <button
                   onClick={toggleLanguage}
@@ -184,7 +230,6 @@ export function Navbar() {
                   {currentLang === "en" ? "English" : "Español"}
                 </button>
               </div>
-
               <div className="flex items-center gap-1 pt-1" data-testid="mobile-currency-selector">
                 {CURRENCIES.map((c) => (
                   <button

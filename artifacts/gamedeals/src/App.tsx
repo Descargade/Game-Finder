@@ -5,12 +5,15 @@ import { I18nextProvider } from "react-i18next";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CurrencyProvider } from "@/context/CurrencyContext";
+import { WishlistProvider } from "@/context/WishlistContext";
+import { RecentlyViewedProvider } from "@/context/RecentlyViewedContext";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import Home from "@/pages/Home";
 import AllDeals from "@/pages/AllDeals";
 import GameDetail from "@/pages/GameDetail";
 import SearchResults from "@/pages/SearchResults";
+import Wishlist from "@/pages/Wishlist";
 import NotFound from "@/pages/not-found";
 import i18n from "@/lib/i18n";
 
@@ -31,6 +34,7 @@ function Router() {
         <Route path="/deals" component={AllDeals} />
         <Route path="/game/:id" component={GameDetail} />
         <Route path="/search" component={SearchResults} />
+        <Route path="/wishlist" component={Wishlist} />
         <Route component={NotFound} />
       </Switch>
     </AnimatePresence>
@@ -41,16 +45,20 @@ function App() {
   return (
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
-        <CurrencyProvider>
-          <TooltipProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Navbar />
-              <Router />
-              <Footer />
-            </WouterRouter>
-            <Toaster />
-          </TooltipProvider>
-        </CurrencyProvider>
+        <WishlistProvider>
+          <RecentlyViewedProvider>
+            <CurrencyProvider>
+              <TooltipProvider>
+                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                  <Navbar />
+                  <Router />
+                  <Footer />
+                </WouterRouter>
+                <Toaster />
+              </TooltipProvider>
+            </CurrencyProvider>
+          </RecentlyViewedProvider>
+        </WishlistProvider>
       </QueryClientProvider>
     </I18nextProvider>
   );

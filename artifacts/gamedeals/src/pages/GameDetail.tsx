@@ -1,18 +1,21 @@
 import { useParams, Link } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, ExternalLink, Tag, TrendingDown, Star } from "lucide-react";
+import { ArrowLeft, ExternalLink, Tag, TrendingDown, Star, Heart } from "lucide-react";
 import { useGameDetail } from "@/hooks/useGameDetail";
 import { useStores } from "@/hooks/useStores";
 import { StoreBadge, getStoreName } from "@/components/StoreBadge";
+import { WishlistButton } from "@/components/WishlistButton";
 import { useCurrency } from "@/context/CurrencyContext";
-import { useState } from "react";
+import { useRecentlyViewed } from "@/context/RecentlyViewedContext";
+import { useWishlist } from "@/context/WishlistContext";
+import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 function getSteamImage(steamAppID: string | null | undefined, size: "header" | "hero" = "header") {
   if (!steamAppID) return null;
-  if (size === "hero") {
-    return `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppID}/library_hero.jpg`;
-  }
+  if (size === "hero") return `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppID}/library_hero.jpg`;
   return `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppID}/header.jpg`;
 }
 
@@ -22,6 +25,9 @@ export default function GameDetail() {
   const { data: game, isLoading, isError } = useGameDetail(gameId);
   const { data: stores } = useStores();
   const { convertPrice } = useCurrency();
+  const { track } = useRecentlyViewed();
+  const { isWishlisted, add, remove } = useWishlist();
+  const { t } = useTranslation();
   const [heroImgError, setHeroImgError] = useState(false);
 
   const steamAppID = game?.info?.steamAppID ?? null;
@@ -29,13 +35,40 @@ export default function GameDetail() {
     ? getSteamImage(steamAppID, "hero")
     : game?.info?.thumb ?? "";
 
-  const storeName = (storeID: string) => {
-    return stores?.find((s) => s.storeID === storeID)?.storeName ?? getStoreName(storeID);
-  };
+  useEffect(() => {
+    if (game?.info) {
+      track({
+        gameID: game.info.gameID ?? gameId ?? "",
+        title: game.info.name,
+        thumb: game.info.thumb,
+        steamAppID: game.info.steamAppID,
+      });
+    }
+  }, [game?.info?.name]);
+
+  const storeName = (storeID: string) =>
+    stores?.find((s) => s.storeID === storeID)?.storeName ?? getStoreName(storeID);
 
   const sortedDeals = game?.deals
     ? [...game.deals].sort((a, b) => parseFloat(a.price) - parseFloat(b.price))
     : [];
+
+  const bestDeal = sortedDeals[0];
+  const wishlisted = game ? isWishlisted(game.info?.gameID ?? gameId ?? "") : false;
+
+  const wishlistItem = game && bestDeal
+    ? {
+        dealID: bestDeal.dealID,
+        gameID: game.info?.gameID ?? gameId ?? "",
+        title: game.info.name,
+        thumb: game.info.thumb,
+        steamAppID: game.info.steamAppID,
+        salePrice: bestDeal.price,
+        normalPrice: bestDeal.retailPrice,
+        savings: bestDeal.savings,
+        storeID: bestDeal.storeID,
+      }
+    : null;
 
   if (isLoading) {
     return (
@@ -62,10 +95,10 @@ export default function GameDetail() {
     return (
       <div className="min-h-screen bg-background pt-20 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Game not found or failed to load.</p>
+          <p className="text-muted-foreground mb-4">{t("common.error")}</p>
           <Link href="/">
             <button className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium">
-              Back to Home
+              {t("game.back")}
             </button>
           </Link>
         </div>
@@ -80,14 +113,31 @@ export default function GameDetail() {
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
 
-        <Link href="/">
-          <button
-            data-testid="back-button"
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm mb-6"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back
-          </button>
-        </Link>
+        <div className="flex items-center justify-between mb-6">
+          <Link href="/">
+            <button
+              data-testid="back-button"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm"
+            >
+              <ArrowLeft className="w-4 h-4" /> {t("game.back")}
+            </button>
+          </Link>
+          {wishlistItem && (
+            <button
+              onClick={() => wishlisted ? remove(wishlistItem.gameID) : add(wishlistItem)}
+              data-testid="game-wishlist-btn"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-medium transition-all",
+                wishlisted
+                  ? "border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                  : "border-border/40 bg-secondary/60 text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Heart className="w-4 h-4" fill={wishlisted ? "currentColor" : "none"} />
+              {wishlisted ? t("game.removeFromWishlist") : t("game.addToWishlist")}
+            </button>
+          )}
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -126,7 +176,7 @@ export default function GameDetail() {
                     data-testid="steam-link"
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-foreground/80 border border-white/10 transition-colors"
                   >
-                    View on Steam <ExternalLink className="w-3 h-3" />
+                    {t("game.viewOnSteam")} <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
               </div>
@@ -140,10 +190,10 @@ export default function GameDetail() {
                   <div className="p-4 rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
                       <TrendingDown className="w-3.5 h-3.5" />
-                      Cheapest Ever
+                      {t("game.cheapestEver")}
                     </div>
                     <p className="text-lg font-bold text-foreground" data-testid="cheapest-ever-price">
-                      {parseFloat(cheapestEver.price) === 0 ? "FREE" : convertPrice(cheapestEver.price)}
+                      {parseFloat(cheapestEver.price) === 0 ? t("common.free") : convertPrice(cheapestEver.price)}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {new Date(cheapestEver.date * 1000).toLocaleDateString("en-US", { year: "numeric", month: "short" })}
@@ -155,10 +205,10 @@ export default function GameDetail() {
                   <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 backdrop-blur-sm">
                     <div className="flex items-center gap-1.5 text-xs text-primary mb-1">
                       <Tag className="w-3.5 h-3.5" />
-                      Best Current
+                      {t("game.bestCurrent")}
                     </div>
                     <p className="text-lg font-bold text-foreground" data-testid="best-current-price">
-                      {parseFloat(lowestPrice.price) === 0 ? "FREE" : convertPrice(lowestPrice.price)}
+                      {parseFloat(lowestPrice.price) === 0 ? t("common.free") : convertPrice(lowestPrice.price)}
                     </p>
                     <StoreBadge storeID={lowestPrice.storeID} className="mt-1" />
                   </div>
@@ -168,37 +218,40 @@ export default function GameDetail() {
                   <div className="p-4 rounded-xl border border-green-500/30 bg-green-500/5 backdrop-blur-sm">
                     <div className="flex items-center gap-1.5 text-xs text-green-400 mb-1">
                       <Star className="w-3.5 h-3.5" />
-                      Max Savings
+                      {t("game.maxSavings")}
                     </div>
                     <p className="text-2xl font-bold text-green-400" data-testid="max-savings">
                       -{Math.round(parseFloat(lowestPrice.savings))}%
                     </p>
-                    <p className="text-xs text-muted-foreground">off retail</p>
+                    <p className="text-xs text-muted-foreground">{t("game.offRetail")}</p>
                   </div>
                 )}
               </div>
 
               {steamAppID && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {["capsule_616x353", "ss_1"].map((img, i) => (
-                    <motion.div
-                      key={img}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.2 + i * 0.1 }}
-                      className="rounded-xl overflow-hidden border border-border/40 aspect-video"
-                    >
-                      <img
-                        src={`https://cdn.akamai.steamstatic.com/steam/apps/${steamAppID}/${img}.jpg`}
-                        alt={`${game.info.name} screenshot ${i + 1}`}
-                        className="w-full h-full object-cover"
-                        data-testid={`screenshot-${i}`}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    </motion.div>
-                  ))}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    {t("game.screenshots")}
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {["capsule_616x353", "ss_1"].map((img, i) => (
+                      <motion.div
+                        key={img}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2 + i * 0.1 }}
+                        className="rounded-xl overflow-hidden border border-border/40 aspect-video"
+                      >
+                        <img
+                          src={`https://cdn.akamai.steamstatic.com/steam/apps/${steamAppID}/${img}.jpg`}
+                          alt={`${game.info.name} screenshot ${i + 1}`}
+                          className="w-full h-full object-cover"
+                          data-testid={`screenshot-${i}`}
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -208,10 +261,10 @@ export default function GameDetail() {
                 className="text-lg font-bold text-foreground"
                 style={{ fontFamily: "var(--app-font-heading, 'Space Grotesk', sans-serif)" }}
               >
-                Available Deals
+                {t("game.availableDeals")}
               </h2>
               {sortedDeals.length === 0 && (
-                <p className="text-muted-foreground text-sm">No current deals found.</p>
+                <p className="text-muted-foreground text-sm">{t("game.noDeal")}</p>
               )}
               {sortedDeals.map((deal, i) => {
                 const savings = Math.round(parseFloat(deal.savings));
@@ -243,7 +296,7 @@ export default function GameDetail() {
                           </p>
                         )}
                         <p className="text-base font-bold text-foreground" data-testid={`deal-price-${deal.dealID}`}>
-                          {isFree ? "FREE" : convertPrice(deal.price)}
+                          {isFree ? t("common.free") : convertPrice(deal.price)}
                         </p>
                       </div>
                       <a
@@ -253,7 +306,7 @@ export default function GameDetail() {
                         data-testid={`get-deal-${deal.dealID}`}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/20 hover:bg-primary/40 text-primary text-xs font-semibold border border-primary/30 transition-colors"
                       >
-                        Get Deal <ExternalLink className="w-3 h-3" />
+                        {t("game.getDeal")} <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
                   </motion.div>

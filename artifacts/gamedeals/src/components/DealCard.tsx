@@ -3,6 +3,7 @@ import { ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { Deal } from "@/types";
 import { StoreBadge } from "./StoreBadge";
+import { WishlistButton } from "./WishlistButton";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -19,11 +20,30 @@ function getSteamImage(steamAppID: string | null, thumb: string) {
   return thumb;
 }
 
+function getDaysSince(unixTs: number): number {
+  return Math.floor((Date.now() / 1000 - unixTs) / 86400);
+}
+
 export function DealCard({ deal, index = 0 }: DealCardProps) {
   const { convertPrice } = useCurrency();
   const [imgSrc, setImgSrc] = useState(getSteamImage(deal.steamAppID, deal.thumb));
   const savings = Math.round(parseFloat(deal.savings));
   const isFree = parseFloat(deal.salePrice) === 0;
+  const daysSince = getDaysSince(deal.lastChange);
+  const isNew = daysSince <= 2;
+  const isRecent = daysSince <= 7;
+
+  const wishlistItem = {
+    dealID: deal.dealID,
+    gameID: deal.gameID,
+    title: deal.title,
+    thumb: deal.thumb,
+    steamAppID: deal.steamAppID,
+    salePrice: deal.salePrice,
+    normalPrice: deal.normalPrice,
+    savings: deal.savings,
+    storeID: deal.storeID,
+  };
 
   return (
     <motion.div
@@ -46,7 +66,7 @@ export function DealCard({ deal, index = 0 }: DealCardProps) {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent opacity-60" />
 
-          {savings > 0 && (
+          {savings > 0 && !isFree && (
             <div
               className={cn(
                 "absolute top-2 left-2 px-2 py-0.5 rounded-md text-xs font-bold text-white",
@@ -61,6 +81,12 @@ export function DealCard({ deal, index = 0 }: DealCardProps) {
           {isFree && (
             <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-xs font-bold bg-primary text-primary-foreground">
               FREE
+            </div>
+          )}
+
+          {isNew && (
+            <div className="absolute top-2 right-8 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-yellow-500/90 text-black">
+              NEW
             </div>
           )}
         </div>
@@ -92,8 +118,18 @@ export function DealCard({ deal, index = 0 }: DealCardProps) {
             </div>
             <StoreBadge storeID={deal.storeID} />
           </div>
+
+          {isRecent && !isNew && (
+            <p className="text-[10px] text-muted-foreground/60">
+              Updated {daysSince}d ago
+            </p>
+          )}
         </div>
       </Link>
+
+      <div className="absolute top-2 right-2 flex gap-1">
+        <WishlistButton item={wishlistItem} />
+      </div>
 
       <a
         href={`https://www.cheapshark.com/redirect?dealID=${deal.dealID}`}

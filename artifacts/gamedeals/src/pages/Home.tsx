@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { ArrowRight, TrendingUp, Star, Percent, ExternalLink } from "lucide-react";
+import { ArrowRight, TrendingUp, Star, Percent, ExternalLink, Clock } from "lucide-react";
 import { useDeals } from "@/hooks/useDeals";
 import { DealCard } from "@/components/DealCard";
 import { SkeletonGrid } from "@/components/SkeletonCard";
 import { useState } from "react";
 import { Deal } from "@/types";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useRecentlyViewed } from "@/context/RecentlyViewedContext";
 import { useTranslation } from "react-i18next";
 
 function HeroSection({ deal }: { deal: Deal }) {
@@ -33,26 +34,15 @@ function HeroSection({ deal }: { deal: Deal }) {
           alt={deal.title}
           className="w-full h-full object-cover"
         />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to right, rgba(8,10,20,0.95) 35%, rgba(8,10,20,0.5) 70%, transparent 100%)",
-          }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to top, rgba(8,10,20,0.8) 0%, transparent 60%)",
-          }}
-        />
+        <div className="absolute inset-0" style={{
+          background: "linear-gradient(to right, rgba(8,10,20,0.95) 35%, rgba(8,10,20,0.5) 70%, transparent 100%)",
+        }} />
+        <div className="absolute inset-0" style={{
+          background: "linear-gradient(to top, rgba(8,10,20,0.8) 0%, transparent 60%)",
+        }} />
       </div>
 
-      <div
-        className="relative z-10 p-8 md:p-12 flex flex-col justify-end h-full"
-        style={{ minHeight: 340 }}
-      >
+      <div className="relative z-10 p-8 md:p-12 flex flex-col justify-end h-full" style={{ minHeight: 340 }}>
         <div className="max-w-lg">
           <div className="flex items-center gap-2 mb-3">
             <span className="px-2 py-0.5 bg-primary/20 text-primary border border-primary/30 text-xs font-semibold rounded-md">
@@ -144,7 +134,10 @@ function HeroCarousel({ deals }: { deals: Deal[] }) {
   return (
     <div className="mb-12">
       <SectionHeader icon={Star} title={t("home.topRatedDeals")} href="/deals" />
-      <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory" style={{ scrollbarWidth: "none" }}>
+      <div
+        className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
+        style={{ scrollbarWidth: "none" }}
+      >
         {deals.slice(0, 8).map((deal, i) => (
           <motion.div
             key={deal.dealID}
@@ -157,6 +150,52 @@ function HeroCarousel({ deals }: { deals: Deal[] }) {
             <DealCard deal={deal} index={i} />
           </motion.div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function RecentlyViewedSection() {
+  const { items } = useRecentlyViewed();
+  const { t } = useTranslation();
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mb-12">
+      <SectionHeader icon={Clock} title={t("home.recentlyViewed")} />
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+        {items.map((game, i) => {
+          const src = game.steamAppID
+            ? `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppID}/header.jpg`
+            : game.thumb;
+          return (
+            <motion.div
+              key={game.gameID}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+            >
+              <Link href={`/game/${game.gameID}`}>
+                <div
+                  className="group rounded-xl overflow-hidden border border-border/40 bg-card/60 hover:border-primary/40 hover:shadow-md hover:shadow-primary/10 transition-all duration-300 cursor-pointer"
+                  data-testid={`recently-viewed-${game.gameID}`}
+                >
+                  <div className="aspect-video overflow-hidden">
+                    <img
+                      src={src}
+                      alt={game.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => { (e.target as HTMLImageElement).src = game.thumb; }}
+                    />
+                  </div>
+                  <p className="p-1.5 text-[10px] font-medium text-muted-foreground line-clamp-1 group-hover:text-foreground transition-colors">
+                    {game.title}
+                  </p>
+                </div>
+              </Link>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
@@ -175,13 +214,12 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
 
         {topDeals.isLoading ? (
-          <div
-            className="rounded-2xl bg-card/60 border border-border/40 mb-12 animate-pulse"
-            style={{ height: 340 }}
-          />
+          <div className="rounded-2xl bg-card/60 border border-border/40 mb-12 animate-pulse" style={{ height: 340 }} />
         ) : heroDeal ? (
           <HeroSection deal={heroDeal} />
         ) : null}
+
+        <RecentlyViewedSection />
 
         {topDeals.isLoading ? (
           <div className="mb-12">
