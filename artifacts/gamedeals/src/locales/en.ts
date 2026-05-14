@@ -65,6 +65,8 @@ const en = {
     placeholder: "Search games, titles, genres...",
     viewAllResults: "View all results for",
     suggestions: "Suggestions",
+    foundResults: "{{count}} result(s) found",
+    from: "from",
   },
   game: {
     back: "Back",
@@ -94,6 +96,11 @@ const en = {
     belowTargetTitle: "Below Target Price",
     allItems: "All Saved Games",
     hitTarget: "Target hit!",
+  },
+  notFound: {
+    title: "Page not found",
+    description: "Looks like this deal has expired or the page doesn't exist.",
+    backHome: "Back to Deals",
   },
   common: {
     free: "FREE",

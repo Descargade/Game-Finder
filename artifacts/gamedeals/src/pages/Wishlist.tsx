@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Trash2, Target, ChevronDown, ChevronUp, ExternalLink, Clock } from "lucide-react";
 import { Link } from "wouter";
-import { useWishlist } from "@/context/WishlistContext";
+import { useWishlist, WishlistItem } from "@/context/WishlistContext";
 import { useRecentlyViewed } from "@/context/RecentlyViewedContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { EmptyState } from "@/components/EmptyState";
@@ -39,6 +39,8 @@ function TargetPriceInput({
       <button
         onClick={() => setOpen(!open)}
         data-testid={`target-price-toggle-${gameID}`}
+        aria-expanded={open}
+        aria-label={current !== undefined ? `Target price: $${current.toFixed(2)}` : t("wishlist.setTarget")}
         className={cn(
           "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
           current !== undefined
@@ -46,9 +48,9 @@ function TargetPriceInput({
             : "border-border/40 bg-secondary/50 text-muted-foreground hover:text-foreground"
         )}
       >
-        <Target className="w-3 h-3" />
+        <Target className="w-3 h-3" aria-hidden="true" />
         {current !== undefined ? `$${current.toFixed(2)}` : t("wishlist.setTarget")}
-        {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        {open ? <ChevronUp className="w-3 h-3" aria-hidden="true" /> : <ChevronDown className="w-3 h-3" aria-hidden="true" />}
       </button>
       <AnimatePresence>
         {open && (
@@ -57,11 +59,13 @@ function TargetPriceInput({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.97 }}
             transition={{ duration: 0.15 }}
+            role="dialog"
+            aria-label="Set target price"
             className="absolute top-full left-0 mt-1.5 z-10 p-3 rounded-xl border border-border/50 bg-popover shadow-xl shadow-black/40 min-w-[180px]"
           >
             <p className="text-xs text-muted-foreground mb-2">{t("wishlist.targetHint")}</p>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">$</span>
+              <span className="text-sm text-muted-foreground" aria-hidden="true">$</span>
               <input
                 type="number"
                 min="0"
@@ -69,10 +73,14 @@ function TargetPriceInput({
                 value={val}
                 onChange={(e) => setVal(e.target.value)}
                 placeholder="0.00"
+                aria-label="Target price in USD"
                 className="flex-1 px-2 py-1.5 rounded-lg border border-border/50 bg-secondary/60 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 w-20"
                 data-testid={`target-price-input-${gameID}`}
                 autoFocus
-                onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") setOpen(false); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSave();
+                  if (e.key === "Escape") setOpen(false);
+                }}
               />
             </div>
             <div className="flex gap-2 mt-2">
@@ -100,10 +108,113 @@ function TargetPriceInput({
   );
 }
 
+function WishlistRow({
+  item,
+  index,
+  highlight,
+  onRemove,
+  onSetTarget,
+}: {
+  item: WishlistItem;
+  index: number;
+  highlight?: boolean;
+  onRemove: (id: string) => void;
+  onSetTarget: (id: string, price: number | undefined) => void;
+}) {
+  const { t } = useTranslation();
+  const { convertPrice } = useCurrency();
+  const [imgSrc, setImgSrc] = useState(getSteamImage(item.steamAppID, item.thumb));
+  const savings = Math.round(parseFloat(item.savings));
+  const isFree = parseFloat(item.salePrice) === 0;
+  const belowTarget = item.targetPrice !== undefined && parseFloat(item.salePrice) <= item.targetPrice;
+
+  return (
+    <motion.article
+      initial={{ opacity: 0, x: -12 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -12 }}
+      transition={{ delay: index * 0.05 }}
+      data-testid={`wishlist-item-${item.gameID}`}
+      className={cn(
+        "flex items-center gap-4 p-4 rounded-xl border backdrop-blur-sm transition-all",
+        highlight ? "border-green-500/30 bg-green-500/5" : "border-border/40 bg-card/60"
+      )}
+    >
+      <Link href={`/game/${item.gameID}`} aria-label={`View ${item.title}`}>
+        <div className="w-20 h-14 flex-shrink-0 rounded-lg overflow-hidden border border-border/30 cursor-pointer">
+          <img
+            src={imgSrc}
+            alt={item.title}
+            onError={() => setImgSrc(item.thumb)}
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
+        </div>
+      </Link>
+
+      <div className="flex-1 min-w-0">
+        <Link href={`/game/${item.gameID}`}>
+          <p className="text-sm font-semibold text-foreground hover:text-primary transition-colors line-clamp-1 cursor-pointer mb-1">
+            {item.title}
+          </p>
+        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          <StoreBadge storeID={item.storeID} />
+          {savings > 0 && (
+            <span className="text-[10px] font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-md">
+              -{savings}%
+            </span>
+          )}
+          {belowTarget && (
+            <span className="text-[10px] font-bold text-green-400 flex items-center gap-0.5">
+              <Target className="w-3 h-3" aria-hidden="true" /> {t("wishlist.hitTarget")}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+        <div className="text-right">
+          {!isFree && parseFloat(item.normalPrice) > parseFloat(item.salePrice) && (
+            <p className="text-xs text-muted-foreground line-through">{convertPrice(item.normalPrice)}</p>
+          )}
+          <p className="text-base font-bold text-foreground" data-testid={`wishlist-price-${item.gameID}`}>
+            {isFree ? t("common.free") : convertPrice(item.salePrice)}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <TargetPriceInput
+            gameID={item.gameID}
+            current={item.targetPrice}
+            onSave={(p) => onSetTarget(item.gameID, p)}
+          />
+          <a
+            href={`https://www.cheapshark.com/redirect?dealID=${item.dealID}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid={`wishlist-deal-${item.dealID}`}
+            aria-label={`Get deal for ${item.title}`}
+            className="p-1.5 rounded-lg bg-primary/10 hover:bg-primary/30 text-primary border border-primary/20 transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+          </a>
+          <button
+            onClick={() => onRemove(item.gameID)}
+            data-testid={`wishlist-remove-${item.gameID}`}
+            aria-label={`Remove ${item.title} from wishlist`}
+            className="p-1.5 rounded-lg bg-secondary/60 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 border border-border/40 hover:border-red-500/30 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    </motion.article>
+  );
+}
+
 export default function Wishlist() {
   const { items, remove, setTargetPrice, belowTargetCount } = useWishlist();
   const { items: recentItems } = useRecentlyViewed();
-  const { convertPrice } = useCurrency();
   const { t } = useTranslation();
 
   const belowTarget = items.filter(
@@ -124,7 +235,7 @@ export default function Wishlist() {
         >
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Heart className="w-5 h-5 text-red-400 fill-red-400" />
+              <Heart className="w-5 h-5 text-red-400 fill-red-400" aria-hidden="true" />
               <h1
                 className="text-3xl font-bold text-foreground"
                 style={{ fontFamily: "var(--app-font-heading, 'Space Grotesk', sans-serif)" }}
@@ -133,14 +244,17 @@ export default function Wishlist() {
                 {t("wishlist.title")}
               </h1>
               {items.length > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-secondary text-muted-foreground text-xs font-semibold border border-border/40">
+                <span
+                  className="px-2 py-0.5 rounded-full bg-secondary text-muted-foreground text-xs font-semibold border border-border/40"
+                  aria-label={`${items.length} saved games`}
+                >
                   {items.length}
                 </span>
               )}
             </div>
             {belowTargetCount > 0 && (
-              <p className="text-sm text-green-400 font-medium flex items-center gap-1.5">
-                <Target className="w-3.5 h-3.5" />
+              <p className="text-sm text-green-400 font-medium flex items-center gap-1.5" role="status">
+                <Target className="w-3.5 h-3.5" aria-hidden="true" />
                 {t("wishlist.belowTarget", { count: belowTargetCount })}
               </p>
             )}
@@ -149,7 +263,7 @@ export default function Wishlist() {
 
         {items.length === 0 ? (
           <EmptyState
-            icon={<Heart className="w-9 h-9" />}
+            icon={<Heart className="w-9 h-9" aria-hidden="true" />}
             title={t("wishlist.emptyTitle")}
             description={t("wishlist.emptyDesc")}
             actionLabel={t("wishlist.browseDeals")}
@@ -158,9 +272,9 @@ export default function Wishlist() {
         ) : (
           <div className="space-y-8">
             {belowTarget.length > 0 && (
-              <section>
+              <section aria-label={t("wishlist.belowTargetTitle")}>
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <div className="p-1.5 rounded-lg bg-green-500/10 border border-green-500/20" aria-hidden="true">
                     <Target className="w-4 h-4 text-green-400" />
                   </div>
                   <h2
@@ -182,8 +296,6 @@ export default function Wishlist() {
                       highlight
                       onRemove={remove}
                       onSetTarget={setTargetPrice}
-                      convertPrice={convertPrice}
-                      t={t}
                     />
                   ))}
                 </div>
@@ -191,10 +303,10 @@ export default function Wishlist() {
             )}
 
             {others.length > 0 && (
-              <section>
+              <section aria-label={belowTarget.length > 0 ? t("wishlist.allItems") : t("wishlist.title")}>
                 {belowTarget.length > 0 && (
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20">
+                    <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20" aria-hidden="true">
                       <Heart className="w-4 h-4 text-primary" />
                     </div>
                     <h2
@@ -213,8 +325,6 @@ export default function Wishlist() {
                       index={i}
                       onRemove={remove}
                       onSetTarget={setTargetPrice}
-                      convertPrice={convertPrice}
-                      t={t}
                     />
                   ))}
                 </div>
@@ -224,9 +334,9 @@ export default function Wishlist() {
         )}
 
         {recentItems.length > 0 && (
-          <section className="mt-14">
+          <section className="mt-14" aria-label={t("home.recentlyViewed")}>
             <div className="flex items-center gap-2 mb-5">
-              <div className="p-1.5 rounded-lg bg-secondary/60 border border-border/40">
+              <div className="p-1.5 rounded-lg bg-secondary/60 border border-border/40" aria-hidden="true">
                 <Clock className="w-4 h-4 text-muted-foreground" />
               </div>
               <h2
@@ -248,7 +358,7 @@ export default function Wishlist() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.06 }}
                   >
-                    <Link href={`/game/${game.gameID}`}>
+                    <Link href={`/game/${game.gameID}`} aria-label={`View ${game.title}`}>
                       <div className="group rounded-xl overflow-hidden border border-border/40 bg-card/60 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 cursor-pointer">
                         <div className="aspect-video overflow-hidden">
                           <img
@@ -256,6 +366,7 @@ export default function Wishlist() {
                             alt={game.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             onError={(e) => { (e.target as HTMLImageElement).src = game.thumb; }}
+                            loading="lazy"
                           />
                         </div>
                         <p className="p-2 text-xs font-medium text-foreground line-clamp-1">
@@ -271,112 +382,5 @@ export default function Wishlist() {
         )}
       </div>
     </div>
-  );
-}
-
-function WishlistRow({
-  item,
-  index,
-  highlight,
-  onRemove,
-  onSetTarget,
-  convertPrice,
-  t,
-}: {
-  item: import("@/context/WishlistContext").WishlistItem;
-  index: number;
-  highlight?: boolean;
-  onRemove: (id: string) => void;
-  onSetTarget: (id: string, price: number | undefined) => void;
-  convertPrice: (p: string | number) => string;
-  t: (key: string, opts?: Record<string, unknown>) => string;
-}) {
-  const [imgSrc, setImgSrc] = useState(getSteamImage(item.steamAppID, item.thumb));
-  const savings = Math.round(parseFloat(item.savings));
-  const isFree = parseFloat(item.salePrice) === 0;
-  const belowTarget = item.targetPrice !== undefined && parseFloat(item.salePrice) <= item.targetPrice;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -12 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -12 }}
-      transition={{ delay: index * 0.05 }}
-      data-testid={`wishlist-item-${item.gameID}`}
-      className={cn(
-        "flex items-center gap-4 p-4 rounded-xl border backdrop-blur-sm transition-all",
-        highlight
-          ? "border-green-500/30 bg-green-500/5"
-          : "border-border/40 bg-card/60"
-      )}
-    >
-      <Link href={`/game/${item.gameID}`}>
-        <div className="w-20 h-14 flex-shrink-0 rounded-lg overflow-hidden border border-border/30 cursor-pointer">
-          <img
-            src={imgSrc}
-            alt={item.title}
-            onError={() => setImgSrc(item.thumb)}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-          />
-        </div>
-      </Link>
-
-      <div className="flex-1 min-w-0">
-        <Link href={`/game/${item.gameID}`}>
-          <p className="text-sm font-semibold text-foreground hover:text-primary transition-colors line-clamp-1 cursor-pointer mb-1">
-            {item.title}
-          </p>
-        </Link>
-        <div className="flex items-center gap-2 flex-wrap">
-          <StoreBadge storeID={item.storeID} />
-          {savings > 0 && (
-            <span className="text-[10px] font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-md">
-              -{savings}%
-            </span>
-          )}
-          {belowTarget && (
-            <span className="text-[10px] font-bold text-green-400 flex items-center gap-0.5">
-              <Target className="w-3 h-3" /> {t("wishlist.hitTarget")}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-col items-end gap-2 flex-shrink-0">
-        <div className="text-right">
-          {!isFree && parseFloat(item.normalPrice) > parseFloat(item.salePrice) && (
-            <p className="text-xs text-muted-foreground line-through">{convertPrice(item.normalPrice)}</p>
-          )}
-          <p className="text-base font-bold text-foreground" data-testid={`wishlist-price-${item.gameID}`}>
-            {isFree ? "FREE" : convertPrice(item.salePrice)}
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <TargetPriceInput
-            gameID={item.gameID}
-            current={item.targetPrice}
-            onSave={(p) => onSetTarget(item.gameID, p)}
-          />
-          <a
-            href={`https://www.cheapshark.com/redirect?dealID=${item.dealID}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-testid={`wishlist-deal-${item.dealID}`}
-            className="p-1.5 rounded-lg bg-primary/10 hover:bg-primary/30 text-primary border border-primary/20 transition-colors"
-            title="Get deal"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-          <button
-            onClick={() => onRemove(item.gameID)}
-            data-testid={`wishlist-remove-${item.gameID}`}
-            className="p-1.5 rounded-lg bg-secondary/60 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 border border-border/40 hover:border-red-500/30 transition-colors"
-            title="Remove"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-    </motion.div>
   );
 }

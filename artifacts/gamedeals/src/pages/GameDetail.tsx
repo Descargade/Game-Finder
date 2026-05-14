@@ -38,13 +38,13 @@ export default function GameDetail() {
   useEffect(() => {
     if (game?.info) {
       track({
-        gameID: game.info.gameID ?? gameId ?? "",
+        gameID: gameId ?? "",
         title: game.info.name,
         thumb: game.info.thumb,
         steamAppID: game.info.steamAppID,
       });
     }
-  }, [game?.info?.name]);
+  }, [gameId, game?.info?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const storeName = (storeID: string) =>
     stores?.find((s) => s.storeID === storeID)?.storeName ?? getStoreName(storeID);

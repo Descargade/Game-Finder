@@ -65,6 +65,8 @@ const es = {
     placeholder: "Buscar juegos, títulos, géneros...",
     viewAllResults: "Ver todos los resultados de",
     suggestions: "Sugerencias",
+    foundResults: "{{count}} resultado(s) encontrado(s)",
+    from: "desde",
   },
   game: {
     back: "Volver",
@@ -93,7 +95,12 @@ const es = {
     belowTarget: "{{count}} juego(s) por debajo de tu precio objetivo!",
     belowTargetTitle: "Por Debajo del Precio Objetivo",
     allItems: "Todos los Juegos Guardados",
-    hitTarget: "Objetivo alcanzado!",
+    hitTarget: "¡Objetivo alcanzado!",
+  },
+  notFound: {
+    title: "Página no encontrada",
+    description: "Parece que esta oferta expiró o la página no existe.",
+    backHome: "Volver a las Ofertas",
   },
   common: {
     free: "GRATIS",

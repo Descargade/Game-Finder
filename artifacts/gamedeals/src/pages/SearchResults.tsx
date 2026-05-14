@@ -6,19 +6,26 @@ import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useCurrency } from "@/context/CurrencyContext";
 import { SearchBar } from "@/components/SearchBar";
-import { useState } from "react";
-
-function parseQuery(): string {
-  if (typeof window === "undefined") return "";
-  const params = new URLSearchParams(window.location.search);
-  return params.get("q") ?? "";
-}
 
 export default function SearchResults() {
   const { t } = useTranslation();
   const { convertPrice } = useCurrency();
-  const query = parseQuery();
+  const [location] = useLocation();
+
+  const query = (() => {
+    try {
+      const full = window.location.href;
+      const idx = full.indexOf("?");
+      if (idx === -1) return "";
+      return new URLSearchParams(full.slice(idx)).get("q") ?? "";
+    } catch {
+      return "";
+    }
+  })();
+
   const { data: results, isLoading, isFetching } = useSearch(query, 30);
+  const isSearching = isLoading || isFetching;
+  const count = results?.length ?? 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -30,7 +37,7 @@ export default function SearchResults() {
           className="mb-8"
         >
           <div className="flex items-center gap-2 mb-1 text-muted-foreground text-sm">
-            <Search className="w-4 h-4" />
+            <Search className="w-4 h-4" aria-hidden="true" />
             {t("search.resultsFor")}
           </div>
           <h1
@@ -38,7 +45,7 @@ export default function SearchResults() {
             style={{ fontFamily: "var(--app-font-heading, 'Space Grotesk', sans-serif)" }}
             data-testid="search-heading"
           >
-            "{query}"
+            &ldquo;{query}&rdquo;
           </h1>
         </motion.div>
 
@@ -46,9 +53,9 @@ export default function SearchResults() {
           <SearchBar autoFocus={false} />
         </div>
 
-        {isLoading || isFetching ? (
-          <div className="flex items-center gap-3 py-16 justify-center text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin" />
+        {isSearching ? (
+          <div className="flex items-center gap-3 py-16 justify-center text-muted-foreground" role="status" aria-live="polite">
+            <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
             <span>{t("search.searching")}</span>
           </div>
         ) : !results || results.length === 0 ? (
@@ -59,10 +66,10 @@ export default function SearchResults() {
             data-testid="no-results"
           >
             <div className="w-16 h-16 rounded-2xl bg-secondary/60 border border-border/40 flex items-center justify-center mx-auto mb-4">
-              <Search className="w-7 h-7 text-muted-foreground" />
+              <Search className="w-7 h-7 text-muted-foreground" aria-hidden="true" />
             </div>
             <p className="text-foreground font-medium mb-1">
-              {t("search.noResults")} "{query}"
+              {t("search.noResults")} &ldquo;{query}&rdquo;
             </p>
             <p className="text-muted-foreground text-sm mb-6">{t("search.tryAgain")}</p>
             <Link href="/deals">
@@ -73,12 +80,13 @@ export default function SearchResults() {
           </motion.div>
         ) : (
           <>
-            <p className="text-muted-foreground text-sm mb-6">
-              {results.length} {results.length === 1 ? "result" : "results"}
+            <p className="text-muted-foreground text-sm mb-6" aria-live="polite">
+              {t("search.foundResults", { count })}
             </p>
             <div
               className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
               data-testid="search-results-grid"
+              role="list"
             >
               {results.map((game, i) => {
                 const isFree = parseFloat(game.cheapest) === 0;
@@ -88,20 +96,21 @@ export default function SearchResults() {
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.04 }}
+                    role="listitem"
                   >
                     <Link href={`/game/${game.gameID}`}>
                       <div
                         data-testid={`result-card-${game.gameID}`}
                         className="group flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 cursor-pointer"
+                        role="article"
                       >
                         <div className="flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden border border-border/30">
                           <img
                             src={game.thumb}
                             alt={game.external}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.opacity = "0";
-                            }}
+                            onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0"; }}
+                            loading="lazy"
                           />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -116,7 +125,7 @@ export default function SearchResults() {
                               {isFree ? (
                                 <span className="text-primary font-bold">{t("common.free")}</span>
                               ) : (
-                                <>from {convertPrice(game.cheapest)}</>
+                                <>{t("search.from")} {convertPrice(game.cheapest)}</>
                               )}
                             </p>
                           )}

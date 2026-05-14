@@ -31,7 +31,7 @@ export function DealCard({ deal, index = 0 }: DealCardProps) {
   const isFree = parseFloat(deal.salePrice) === 0;
   const daysSince = getDaysSince(deal.lastChange);
   const isNew = daysSince <= 2;
-  const isRecent = daysSince <= 7;
+  const isRecent = daysSince > 2 && daysSince <= 7;
 
   const wishlistItem = {
     dealID: deal.dealID,
@@ -46,16 +46,15 @@ export function DealCard({ deal, index = 0 }: DealCardProps) {
   };
 
   return (
-    <motion.div
+    <motion.article
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
       viewport={{ once: true }}
-      whileInView={{ opacity: 1, y: 0 }}
       data-testid={`deal-card-${deal.dealID}`}
-      className="group relative rounded-xl overflow-hidden border border-border/40 bg-card/60 backdrop-blur-sm transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 cursor-pointer"
+      className="group relative rounded-xl overflow-hidden border border-border/40 bg-card/60 backdrop-blur-sm transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1"
     >
-      <Link href={`/game/${deal.gameID}`}>
+      <Link href={`/game/${deal.gameID}`} aria-label={`View deal for ${deal.title}`}>
         <div className="relative overflow-hidden aspect-[16/9]">
           <img
             src={imgSrc}
@@ -63,35 +62,38 @@ export function DealCard({ deal, index = 0 }: DealCardProps) {
             onError={() => setImgSrc(deal.thumb)}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             data-testid={`deal-image-${deal.dealID}`}
+            loading="lazy"
+            decoding="async"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent opacity-60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent opacity-60" aria-hidden="true" />
 
-          {savings > 0 && !isFree && (
-            <div
-              className={cn(
-                "absolute top-2 left-2 px-2 py-0.5 rounded-md text-xs font-bold text-white",
-                savings >= 75 ? "bg-green-500" : savings >= 50 ? "bg-emerald-500" : "bg-green-600"
-              )}
-              data-testid={`deal-discount-${deal.dealID}`}
-            >
-              -{savings}%
-            </div>
-          )}
-
-          {isFree && (
-            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-xs font-bold bg-primary text-primary-foreground">
-              FREE
-            </div>
-          )}
-
-          {isNew && (
-            <div className="absolute top-2 right-8 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-yellow-500/90 text-black">
-              NEW
-            </div>
-          )}
+          <div className="absolute top-2 left-2 flex items-center gap-1">
+            {savings > 0 && !isFree && (
+              <span
+                className={cn(
+                  "px-2 py-0.5 rounded-md text-xs font-bold text-white",
+                  savings >= 75 ? "bg-green-500" : savings >= 50 ? "bg-emerald-500" : "bg-green-600"
+                )}
+                data-testid={`deal-discount-${deal.dealID}`}
+                aria-label={`${savings}% off`}
+              >
+                -{savings}%
+              </span>
+            )}
+            {isFree && (
+              <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-primary text-primary-foreground">
+                FREE
+              </span>
+            )}
+            {isNew && (
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-yellow-500/90 text-black">
+                NEW
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="p-3 space-y-2">
+        <div className="p-3 space-y-1.5 pr-10">
           <p
             className="text-sm font-medium text-foreground leading-tight line-clamp-2"
             data-testid={`deal-title-${deal.dealID}`}
@@ -119,7 +121,7 @@ export function DealCard({ deal, index = 0 }: DealCardProps) {
             <StoreBadge storeID={deal.storeID} />
           </div>
 
-          {isRecent && !isNew && (
+          {isRecent && (
             <p className="text-[10px] text-muted-foreground/60">
               Updated {daysSince}d ago
             </p>
@@ -127,7 +129,7 @@ export function DealCard({ deal, index = 0 }: DealCardProps) {
         </div>
       </Link>
 
-      <div className="absolute top-2 right-2 flex gap-1">
+      <div className="absolute top-2 right-2">
         <WishlistButton item={wishlistItem} />
       </div>
 
@@ -138,10 +140,11 @@ export function DealCard({ deal, index = 0 }: DealCardProps) {
         onClick={(e) => e.stopPropagation()}
         data-testid={`deal-link-${deal.dealID}`}
         className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-lg bg-primary/20 hover:bg-primary/40 text-primary border border-primary/30"
-        title="Get this deal"
+        title={`Get deal for ${deal.title}`}
+        aria-label={`Get deal for ${deal.title} on store`}
       >
-        <ExternalLink className="w-3 h-3" />
+        <ExternalLink className="w-3 h-3" aria-hidden="true" />
       </a>
-    </motion.div>
+    </motion.article>
   );
 }
