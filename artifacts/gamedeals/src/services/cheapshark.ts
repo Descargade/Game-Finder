@@ -1,4 +1,4 @@
-import { Deal, GameDetailResponse, GetDealsParams, Store } from "../types";
+import { Deal, GameDetailResponse, GameSearchResult, GetDealsParams, Store } from "../types";
 
 const BASE_URL = "https://www.cheapshark.com/api/1.0";
 
@@ -24,5 +24,14 @@ export async function getGameDetail(gameId: string): Promise<GameDetailResponse>
 export async function getStores(): Promise<Store[]> {
   const res = await fetch(`${BASE_URL}/stores`);
   if (!res.ok) throw new Error("Failed to fetch stores");
+  return res.json();
+}
+
+export async function searchGames(query: string, limit = 10): Promise<GameSearchResult[]> {
+  if (!query.trim()) return [];
+  const res = await fetch(
+    `${BASE_URL}/games?title=${encodeURIComponent(query.trim())}&limit=${limit}`
+  );
+  if (!res.ok) throw new Error("Failed to search games");
   return res.json();
 }

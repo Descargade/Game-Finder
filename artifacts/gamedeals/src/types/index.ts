@@ -64,3 +64,10 @@ export interface GetDealsParams {
   title?: string;
   onSale?: number;
 }
+
+export interface GameSearchResult {
+  gameID: string;
+  external: string;
+  cheapest: string;
+  thumb: string;
+}

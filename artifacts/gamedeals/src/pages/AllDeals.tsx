@@ -2,21 +2,11 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SlidersHorizontal, X, ChevronDown } from "lucide-react";
 import { useDeals } from "@/hooks/useDeals";
-import { useStores } from "@/hooks/useStores";
 import { DealCard } from "@/components/DealCard";
 import { SkeletonGrid } from "@/components/SkeletonCard";
 import { GetDealsParams } from "@/types";
 import { cn } from "@/lib/utils";
-
-const SORT_OPTIONS = [
-  { label: "Best Rating", value: "Deal Rating" },
-  { label: "Biggest Savings", value: "Savings" },
-  { label: "Lowest Price", value: "Price" },
-  { label: "Most Recent", value: "Recent" },
-  { label: "Title A-Z", value: "Title" },
-] as const;
-
-type SortValue = typeof SORT_OPTIONS[number]["value"];
+import { useTranslation } from "react-i18next";
 
 const FEATURED_STORES = [
   { id: "1", name: "Steam" },
@@ -27,14 +17,37 @@ const FEATURED_STORES = [
   { id: "11", name: "WinGameStore" },
 ];
 
+const GENRE_KEYWORDS = [
+  { key: "horror", keyword: "horror" },
+  { key: "action", keyword: "action" },
+  { key: "rpg", keyword: "RPG" },
+  { key: "indie", keyword: "indie" },
+  { key: "shooter", keyword: "shooter" },
+  { key: "multiplayer", keyword: "multiplayer" },
+  { key: "adventure", keyword: "adventure" },
+  { key: "survival", keyword: "survival" },
+  { key: "sports", keyword: "sports" },
+  { key: "racing", keyword: "racing" },
+] as const;
+
+type SortValue = "Deal Rating" | "Savings" | "Price" | "Recent" | "Title";
+
 export default function AllDeals() {
+  const { t } = useTranslation();
   const [sortBy, setSortBy] = useState<SortValue>("Deal Rating");
   const [selectedStore, setSelectedStore] = useState<string>("");
+  const [selectedGenre, setSelectedGenre] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<number>(60);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [page, setPage] = useState(0);
 
-  const { data: stores } = useStores();
+  const SORT_OPTIONS = [
+    { label: t("deals.sort.dealRating"), value: "Deal Rating" as SortValue },
+    { label: t("deals.sort.savings"), value: "Savings" as SortValue },
+    { label: t("deals.sort.price"), value: "Price" as SortValue },
+    { label: t("deals.sort.recent"), value: "Recent" as SortValue },
+    { label: t("deals.sort.title"), value: "Title" as SortValue },
+  ];
 
   const params: GetDealsParams = {
     sortBy,
@@ -43,15 +56,22 @@ export default function AllDeals() {
     onSale: 1,
     ...(selectedStore ? { storeID: selectedStore } : {}),
     ...(maxPrice < 60 ? { upperPrice: maxPrice } : {}),
+    ...(selectedGenre ? { title: selectedGenre } : {}),
   };
 
   const { data: deals, isLoading, isFetching } = useDeals(params);
 
   useEffect(() => {
     setPage(0);
-  }, [sortBy, selectedStore, maxPrice]);
+  }, [sortBy, selectedStore, maxPrice, selectedGenre]);
 
-  const activeFiltersCount = [selectedStore, maxPrice < 60].filter(Boolean).length;
+  const activeFiltersCount = [selectedStore, maxPrice < 60, selectedGenre].filter(Boolean).length;
+
+  const clearAll = () => {
+    setSelectedStore("");
+    setSelectedGenre("");
+    setMaxPrice(60);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -64,10 +84,12 @@ export default function AllDeals() {
             className="text-3xl font-bold text-foreground mb-1"
             style={{ fontFamily: "var(--app-font-heading, 'Space Grotesk', sans-serif)" }}
           >
-            All Deals
+            {t("deals.title")}
           </motion.h1>
           <p className="text-muted-foreground text-sm">
-            {deals ? `${deals.length}+ deals available` : "Loading deals..."}
+            {deals
+              ? t("deals.dealsAvailable", { count: deals.length })
+              : t("deals.loadingDeals")}
           </p>
         </div>
 
@@ -98,7 +120,7 @@ export default function AllDeals() {
             )}
           >
             <SlidersHorizontal className="w-4 h-4" />
-            Filters
+            {t("deals.filters")}
             {activeFiltersCount > 0 && (
               <span className="px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold leading-none">
                 {activeFiltersCount}
@@ -113,6 +135,17 @@ export default function AllDeals() {
               data-testid="clear-store-filter"
             >
               {FEATURED_STORES.find((s) => s.id === selectedStore)?.name ?? `Store ${selectedStore}`}
+              <X className="w-3 h-3" />
+            </button>
+          )}
+
+          {selectedGenre && (
+            <button
+              onClick={() => setSelectedGenre("")}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium border border-primary/20 hover:bg-primary/20 transition-colors"
+              data-testid="clear-genre-filter"
+            >
+              {t(`deals.genres.${selectedGenre}` as any)}
               <X className="w-3 h-3" />
             </button>
           )}
@@ -139,8 +172,11 @@ export default function AllDeals() {
               className="mb-6 overflow-hidden"
             >
               <div className="p-5 rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm space-y-5">
+
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Store / Platform</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    {t("deals.platform")}
+                  </p>
                   <div className="flex flex-wrap gap-2" data-testid="store-filters">
                     <button
                       onClick={() => setSelectedStore("")}
@@ -151,7 +187,7 @@ export default function AllDeals() {
                           : "bg-secondary/50 text-muted-foreground border-border/40 hover:text-foreground"
                       )}
                     >
-                      All Stores
+                      {t("deals.allStores")}
                     </button>
                     {FEATURED_STORES.map((store) => (
                       <button
@@ -173,7 +209,41 @@ export default function AllDeals() {
 
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                    Max Price: {maxPrice >= 60 ? "Any" : `$${maxPrice}`}
+                    {t("deals.genre")}
+                  </p>
+                  <div className="flex flex-wrap gap-2" data-testid="genre-filters">
+                    <button
+                      onClick={() => setSelectedGenre("")}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+                        !selectedGenre
+                          ? "bg-primary/20 text-primary border-primary/40"
+                          : "bg-secondary/50 text-muted-foreground border-border/40 hover:text-foreground"
+                      )}
+                    >
+                      {t("deals.allGenres")}
+                    </button>
+                    {GENRE_KEYWORDS.map(({ key, keyword }) => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedGenre(selectedGenre === keyword ? "" : keyword)}
+                        data-testid={`genre-filter-${key}`}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+                          selectedGenre === keyword
+                            ? "bg-primary/20 text-primary border-primary/40"
+                            : "bg-secondary/50 text-muted-foreground border-border/40 hover:text-foreground"
+                        )}
+                      >
+                        {t(`deals.genres.${key}`)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    {t("deals.maxPrice")}: {maxPrice >= 60 ? t("deals.any") : `$${maxPrice}`}
                   </p>
                   <input
                     type="range"
@@ -186,7 +256,7 @@ export default function AllDeals() {
                     className="w-full max-w-xs accent-primary h-1.5 cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground max-w-xs mt-1">
-                    <span>Free</span>
+                    <span>{t("common.free")}</span>
                     <span>$60+</span>
                   </div>
                 </div>
@@ -212,27 +282,29 @@ export default function AllDeals() {
                 data-testid="prev-page"
                 className="px-4 py-2 rounded-xl border border-border/40 bg-secondary/60 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                Previous
+                {t("deals.previous")}
               </button>
-              <span className="text-sm text-muted-foreground">Page {page + 1}</span>
+              <span className="text-sm text-muted-foreground">
+                {t("deals.page", { page: page + 1 })}
+              </span>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={!deals || deals.length < 48 || isFetching}
                 data-testid="next-page"
                 className="px-4 py-2 rounded-xl border border-border/40 bg-secondary/60 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                Next
+                {t("deals.next")}
               </button>
             </div>
           </>
         ) : (
           <div className="text-center py-20">
-            <p className="text-muted-foreground">No deals found. Try adjusting your filters.</p>
+            <p className="text-muted-foreground">{t("deals.noDeals")}</p>
             <button
-              onClick={() => { setSelectedStore(""); setMaxPrice(60); }}
+              onClick={clearAll}
               className="mt-4 px-4 py-2 bg-primary/10 text-primary rounded-xl text-sm border border-primary/20 hover:bg-primary/20 transition-colors"
             >
-              Reset Filters
+              {t("deals.resetFilters")}
             </button>
           </div>
         )}
