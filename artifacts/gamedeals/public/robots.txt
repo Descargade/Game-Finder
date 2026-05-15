@@ -1,2 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /search
+
+Sitemap: https://gamedeals.app/sitemap.xml

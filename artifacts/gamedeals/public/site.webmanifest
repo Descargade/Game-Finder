@@ -1,0 +1,17 @@
+{
+  "name": "GameDeals",
+  "short_name": "GameDeals",
+  "description": "Discover the best video game deals across Steam, Epic Games, GOG, and 30+ stores.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080a14",
+  "theme_color": "#080a14",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

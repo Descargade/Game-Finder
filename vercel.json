@@ -1,4 +1,8 @@
 {
+  "buildCommand": "pnpm --filter @workspace/gamedeals run build",
+  "outputDirectory": "artifacts/gamedeals/dist/public",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": null,
   "rewrites": [
     { "source": "/((?!assets/).*)", "destination": "/index.html" }
   ],
